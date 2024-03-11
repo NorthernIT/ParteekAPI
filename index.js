@@ -4,6 +4,10 @@ const express = require("express");
 const axios = require("axios");
 const bodyParser = require("body-parser");
 
+const API = require("./integrations/apiAuth");
+
+const { users, payloads} = require("./integrations/initialData");
+
 const app = express();
 app.use(bodyParser.json())
 
@@ -19,18 +23,44 @@ app.get("/", (req,res) => {
     res.send("Hello World!");
 });
 
+app.post("/", (req,res) => {
+    console.log("post made!");
+    res.send("post made!")
+});
+
 app.get('/register', (req, res) => {
     res.render('register.ejs');
+});
+
+app.post('/register', (req, res) => {
+    let name = req.body.name;
+    let email = req.body.email;
+    let user = API.createUser(name,email,req);
+    res.send(`User created here is your API key, keep it safe: ${user.api_key}`);
+});
+
+app.get('/api/payload', API.authenticateKey, (req, res) => {
+    let today = new Date().toISOString().split('T')[0];
+    console.log(today);
+    res.send({
+        data:payloads,
+    });
+});
+
+app.post('/api/payload', API.authenticateKey, (req, res) => {
+    let newPayload = {
+        _id: Date.now(),
+        rawPayload: req.body.rawPayload,
+    };
+    payloads.push(newPayload);
+    res.status(201).send({
+        data: newPayload,
+    });
 });
 
 app.get("/send-message", (req,res) => {
     console.log("Get request to /send-message made");
     res.render('index.ejs');
-});
-
-app.post("/", (req,res) => {
-    console.log("post made!");
-    res.send("post made!")
 });
 
 app.post("/send-message", (req,res) => {
