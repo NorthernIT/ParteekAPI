@@ -1,3 +1,4 @@
+// Only genAPIKey() is being used from this file at the moment.
 const crypto = require('crypto');
 const users = require('./initialData').users;
 
@@ -9,6 +10,7 @@ function genAPIKey() {
   return apiKey;
 }
 
+// createUser should no longer be used anywhere
 const createUser = (_username, _email, req) => {
     let today = new Date().toISOString().split('T')[0];
     let user = {
@@ -25,6 +27,8 @@ const createUser = (_username, _email, req) => {
     return user;
 };
 
+// Below not in use at the moment.
+// Maybe try to use middleware again for authentication at some point.
 const authenticateKey = (req, res, next) => {
     let api_key = req.header("x-api-key"); //Add API key to headers
     let account = users.find((user) => user.api_key == api_key);
@@ -63,4 +67,4 @@ const authenticateKey = (req, res, next) => {
 };
 
 
-module.exports = { createUser, authenticateKey };
+module.exports = { createUser, authenticateKey, genAPIKey };

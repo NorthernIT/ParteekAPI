@@ -7,8 +7,11 @@ const dotenv = require("dotenv");
 
 const API = require("./integrations/apiAuth");
 
+// Eventually will not need:
 const { users, payloads} = require("./integrations/initialData");
+
 const { createPool } = require("./database/sql");
+const { SaveUser, checkApiKey, SavePayload, GetPayload } = require('./integrations/saveData');
 
 const app = express();
 app.use(bodyParser.json())
@@ -26,6 +29,7 @@ async function initPool() {
 }
 
 initPool();
+
 const PORT = process.env.PORT || 1313;
 
 // Basic get and post to root:
@@ -44,34 +48,114 @@ app.get('/register', (req, res) => {
     res.render('register.ejs');
 });
 
-// POST to register new user
-app.post('/register', (req, res) => {
-    let name = req.body.name;
-    let email = req.body.email;
-    let user = API.createUser(name,email,req);
-    res.send(`User created here is your API key, keep it safe: ${user.api_key}`);
+// new POST to register new user to DB:
+app.post('/register', async (req,res) =>{
+    await SaveUser(req.body, connectionPool).then(
+        (result) => {
+            if (result.err) {
+                res.status(400).json({
+                    message: result.message,
+                });
+            } else {
+                console.log("successfully added user");
+                res.status(200).send(result.message);
+            }
+        },
+        (error) => {
+            console.log(error);
+            res.status(400).json(error);
+        }
+    );
 });
 
-// Get rawpayload data
-app.get('/api/payload', API.authenticateKey, (req, res) => {
-    let today = new Date().toISOString().split('T')[0];
-    console.log(today);
-    res.send({
-        data:payloads,
-    });
+// NEW Get rawpayload data with DB:
+app.get('/api/payload', async (req,res) => {
+    let apiKey = req.header("x-api-key");
+    let keyExists = false;
+    await checkApiKey(apiKey,connectionPool).then(
+        (result) => {
+            if (result.err) {
+                res.status(400).json({
+                    message: result.message,
+                });
+            } else {
+                console.log("Check successful");
+                keyExists = result.keyExists;
+            }
+        },
+        (error) => {
+            console.log(error);
+            res.status(400).json(error);
+        }
+    );
+
+    if(keyExists) {
+        await GetPayload(connectionPool).then(
+            (result) => {
+                if (result.err) {
+                    res.status(400).json({
+                        message: result.message
+                    });
+                } else {
+                    console.log("Data sent successfully");
+                    res.status(200).send(result.message);
+                }
+            },
+            (error) => {
+                console.log(error);
+                res.status(400).json(error);
+            }
+        );
+
+    } else {
+        //Reject request if API key doesn't match
+        res.status(403).send({ error: { code: 403, message: "You're not allowed." } });
+    }
 });
 
-// POST new payload data
-app.post('/api/payload', API.authenticateKey, (req, res) => {
-    let newPayload = {
-        _id: Date.now(),
-        rawPayload: req.body.rawPayload,
-    };
-    payloads.push(newPayload);
-    res.status(201).send({
-        data: newPayload,
-    });
+// NEW POST new payload data with DB:
+app.post('/api/payload', async (req,res) => {
+    let apiKey = req.header("x-api-key");
+    let keyExists = false;
+    await checkApiKey(apiKey,connectionPool).then(
+        (result) => {
+            if (result.err) {
+                res.status(400).json({
+                    message: result.message,
+                });
+            } else {
+                console.log("Check successful");
+                keyExists = result.keyExists;
+            }
+        },
+        (error) => {
+            console.log(error);
+            res.status(400).json(error);
+        }
+    );
+
+    if(keyExists) {
+        await SavePayload(req.body,connectionPool).then(
+            (result) => {
+                if (result.err) {
+                    res.status(400).json({
+                        message: result.message,
+                    });
+                } else {
+                    res.status(200).send("Successfully added to DB!");
+                }
+            },
+            (error) => {
+                console.log(error);
+                res.status(400).json(error);
+            }
+        );
+    } else {
+        //Reject request if API key doesn't match
+        res.status(403).send({ error: { code: 403, message: "You're not allowed." } });
+    }
 });
+
 
 // render page to send basic message to slack
 app.get("/send-message", (req,res) => {
