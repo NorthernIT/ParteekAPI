@@ -1,7 +1,6 @@
 const { genAPIKey } = require("./apiAuth");
 
 async function SaveUser(data,pool) {
-    // TODO: Save new users to DB
     return new Promise((resolve, reject) => {
         console.log("Insert User - Querying DB...");
         let apiKey = genAPIKey(); 
@@ -30,7 +29,6 @@ async function SaveUser(data,pool) {
 }
 
 async function checkApiKey(apiKey,pool) {
-    // TODO: check if given API key exists
     return new Promise((resolve,reject) => {
         console.log("Querying DB for key...");
 
@@ -58,7 +56,6 @@ async function checkApiKey(apiKey,pool) {
 }
 
 async function SavePayload(data,pool) {
-    // TODO: Save new rawpayloads to DB
     return new Promise((resolve, reject) => {
         console.log("Insert data entry - Querying DB...");
 
@@ -85,7 +82,6 @@ async function SavePayload(data,pool) {
 }
 
 async function GetPayload(pool) {
-    // TODO: get all payloads in DB
     return new Promise((resolve, reject) => {
         console.log("Getting Data - Querying DB...");
 
@@ -108,9 +104,45 @@ async function GetPayload(pool) {
     });
 }
 
+async function getUserData(apiKey, pool) {
+    // TODO get user name and email if apiKey exists 
+    return new Promise((resolve, reject) => {
+        console.log("Getting user Data - Querying DB...");
+
+        pool.query(
+            "SELECT `name`, `email` FROM `testUsers` WHERE api_key = ?",
+            [apiKey],
+            function (err, results) {
+                if (err) {
+                    return reject({
+                        err: true,
+                        serverMessage: err,
+                    });
+                } else {
+                    const keyExists = results.length > 0;
+                    if (keyExists) {
+                        return resolve({
+                            err: false,
+                            keyExists: keyExists,
+                            name: results[0].name,
+                            email: results[0].email,
+                        });
+                    } else {
+                        return resolve({
+                            err: false,
+                            keyExists: keyExists,
+                        });
+                    }
+                }
+            }
+        );
+    });
+}
+
 module.exports = {
     SaveUser,
     SavePayload,
     checkApiKey,
     GetPayload,
+    getUserData,
 }

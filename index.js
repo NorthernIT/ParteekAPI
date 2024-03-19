@@ -7,11 +7,11 @@ const dotenv = require("dotenv");
 
 const API = require("./integrations/apiAuth");
 
-// Eventually will not need:
+// No longer in use:
 const { users, payloads} = require("./integrations/initialData");
 
 const { createPool } = require("./database/sql");
-const { SaveUser, checkApiKey, SavePayload, GetPayload } = require('./integrations/saveData');
+const { SaveUser, checkApiKey, SavePayload, GetPayload, getUserData } = require('./integrations/query');
 
 const app = express();
 app.use(bodyParser.json())
@@ -20,7 +20,7 @@ dotenv.config();
 app.set('view engined', 'ejs')
 app.set('views', 'views')
 
-app.use(express.urlencoded({ extended: false }))
+app.use(express.urlencoded({ extended: true }))
 
 let connectionPool = null;
 
@@ -35,7 +35,7 @@ const PORT = process.env.PORT || 1313;
 // Basic get and post to root:
 app.get("/", (req,res) => {
     console.log("Get request to / made");
-    res.send("Hello World!");
+    res.render('home.ejs');
 });
 
 app.post("/", (req,res) => {
@@ -59,6 +59,36 @@ app.post('/register', async (req,res) =>{
             } else {
                 console.log("successfully added user");
                 res.status(200).send(result.message);
+            }
+        },
+        (error) => {
+            console.log(error);
+            res.status(400).json(error);
+        }
+    );
+});
+
+// Code for getting user data when apiKey provided:
+app.get('/getUserData', async (req,res) => {
+    let apiKey;
+    if(req.body && req.body.apiKey){
+        apiKey = req.body.apiKey
+    } else {
+        apiKey = req.query.apiKey;
+    }
+
+    await getUserData(apiKey,connectionPool).then(
+        (result) => {
+            if (result.err) {
+                res.status(400).json({
+                    message: result.message,
+                });
+            } else {
+                if (result.keyExists) {
+                    res.status(200).send(`Hello ${result.name}, your email is: ${result.email}!`);
+                } else {
+                    res.send("No user found with such key");
+                }
             }
         },
         (error) => {
