@@ -1,0 +1,24 @@
+<!-- home.ejs -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Page</title>
+    <link rel="stylesheet" href="styles/home.css">
+</head>
+<body>
+    <h1>Welcome to the Home Page</h1>
+    
+    <form action="/getUserData" method="GET">
+        <label for="apiKey">Enter your API Key:</label>
+        <input type="text" id="apiKey" name="apiKey" required>
+        <button type="submit">Get User Details</button>
+    </form>
+
+    <br>
+
+    <a href="/register">Register</a>
+</body>
+</html>
