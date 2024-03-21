@@ -5,13 +5,11 @@ const axios = require("axios");
 const bodyParser = require("body-parser");
 const dotenv = require("dotenv");
 
-const API = require("./integrations/apiAuth");
-
-// No longer in use:
-const { users, payloads} = require("./integrations/initialData");
+const API = require("./integrations/apiAuth"); // Not being used in this file
 
 const { createPool } = require("./database/sql");
-const { SaveUser, checkApiKey, SavePayload, GetPayload, getUserData } = require('./integrations/query');
+const { draginoDecoder, convertHexStringToArray } = require("./integrations/decoders");
+const { SaveUser, checkApiKey, SavePayload, GetPayload, getUserData, processPayload } = require('./integrations/query');
 
 const app = express();
 app.use(bodyParser.json())
@@ -68,7 +66,55 @@ app.post('/register', async (req,res) =>{
     );
 });
 
-// Code for getting user data when apiKey provided:
+// Post for converting payload to actual data:
+// TODO: add authentication
+app.post('/processPayload', async (req, res) => {
+    let apiKey = req.header("x-api-key");
+    let keyExists = false;
+    await checkApiKey(apiKey,connectionPool).then(
+        (result) => {
+            if (result.err) {
+                res.status(400).json({
+                    message: result.message,
+                });
+            } else {
+                console.log("Check successful");
+                keyExists = result.keyExists;
+            }
+        },
+        (error) => {
+            console.log(error);
+            res.status(400).json(error);
+        }
+    );
+    
+    if(keyExists){
+        let bytes = await convertHexStringToArray(req.body.bytes);
+        let data = await draginoDecoder(bytes,req.body.port);
+        await processPayload(data,connectionPool).then(
+            (result) => {
+                if(result.err) {
+                    res.status(400).json({
+                        message: result.message,
+                    });
+                } else {
+                    res.status(200).send("Added Successfully!");
+                }
+            },
+            (error) => {
+                console.log(error);
+                res.status(400).json(error);
+            }
+        );
+    } else {
+        res.status(403).send({ error: { code: 403, message: "You're not allowed." }});
+    }
+});
+
+/* Code for getting user data when apiKey provided:
+ - can be from web client or postman
+ - key must be in body for postman not header
+ - we are not authenticating just getting name and email */
 app.get('/getUserData', async (req,res) => {
     let apiKey;
     if(req.body && req.body.apiKey){
