@@ -139,10 +139,40 @@ async function getUserData(apiKey, pool) {
     });
 }
 
+async function processPayload(data,pool) {
+    return new Promise((resolve,reject) => {
+        console.log("Sending data to dragino table ...");
+
+        pool.query(
+            "INSERT INTO `testDraginoData` SET ?",
+            {
+                BatV: data.BatV,
+                TempC_DS: data.TempC_DS,
+                TempC_SHT: data.TempC_SHT,
+                Hum_SHT: data.Hum_SHT,
+            },
+            function (err, results) {
+                if (err) {
+                    return reject({
+                        err: true,
+                        serverMessage: err,
+                    });
+                } else {
+                    return resolve({
+                        err: false,
+                        message: results,
+                    });
+                }
+            }
+        );
+    });
+}
+
 module.exports = {
     SaveUser,
     SavePayload,
     checkApiKey,
     GetPayload,
     getUserData,
+    processPayload,
 }
